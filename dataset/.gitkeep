@@ -1,0 +1,3 @@
+# This file keeps the dataset/ directory tracked by Git.
+# Face image subdirectories (e.g., dataset/1/, dataset/2/) are excluded via .gitignore.
+# When running the app, user face images will be stored here automatically.
