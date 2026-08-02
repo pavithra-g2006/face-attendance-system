@@ -1,0 +1,3 @@
+# This file keeps the encodings/ directory tracked by Git.
+# Face encoding .npy files are excluded via .gitignore (auto-generated).
+# When you register a user, their encoding is saved here automatically.
