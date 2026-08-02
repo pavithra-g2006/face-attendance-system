@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Take Attendance{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Take Attendance</h1>
+    <p class="page-subtitle">Face the webcam to automatically mark your attendance</p>
+</div>
+
+{% if not has_users %}
+<div class="glass-card">
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <h3>No Registered Users</h3>
+        <p>Register at least one face before taking attendance.</p>
+        <a href="/register" class="btn btn-primary">Register Face</a>
+    </div>
+</div>
+{% else %}
+<div class="two-column">
+    <!-- Left: Webcam Feed -->
+    <div class="glass-card webcam-card">
+        <div class="card-header">
+            <h2>Recognition Feed</h2>
+            <span id="recognition-badge" class="status-badge idle">Idle</span>
+        </div>
+        <div class="webcam-container">
+            <img id="webcam-feed" src="/video_feed/attendance" alt="Webcam Feed">
+            <div id="webcam-overlay" class="webcam-overlay recognition-mode">
+                <div class="scan-line"></div>
+            </div>
+        </div>
+        <div class="webcam-controls">
+            <button id="start-attendance-btn" class="btn btn-primary" onclick="startAttendance()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                Start Recognition
+            </button>
+            <button id="stop-attendance-btn" class="btn btn-danger" style="display: none;" onclick="stopAttendance()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="6" width="12" height="12" />
+                </svg>
+                Stop Recognition
+            </button>
+        </div>
+    </div>
+
+    <!-- Right: Today's Attendance -->
+    <div class="glass-card">
+        <div class="card-header">
+            <h2>Today's Attendance</h2>
+            <span class="badge" id="attendance-count">{{ records|length }}</span>
+        </div>
+        <div id="attendance-list">
+            {% if records %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Time</th>
+                        <th>Confidence</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-tbody">
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.name }}</td>
+                        <td>{{ record.time }}</td>
+                        <td>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: {{ record.confidence }}%"></div>
+                                <span>{{ record.confidence }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state small" id="no-records">
+                <p>No attendance records yet today.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Live Recognition Alerts -->
+        <div id="recognition-alerts" class="recognition-alerts"></div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let attendanceInterval = null;
+    let recordsInterval = null;
+
+    async function startAttendance() {
+        try {
+            const response = await fetch('/api/start_attendance', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('start-attendance-btn').style.display = 'none';
+                document.getElementById('stop-attendance-btn').style.display = 'inline-flex';
+                document.getElementById('recognition-badge').textContent = 'Recognizing';
+                document.getElementById('recognition-badge').className = 'status-badge active';
+
+                attendanceInterval = setInterval(checkAttendanceStatus, 1000);
+                recordsInterval = setInterval(refreshRecords, 2000);
+                showToast('Attendance recognition started', 'success');
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to start attendance', 'error');
+        }
+    }
+
+    async function stopAttendance() {
+        await fetch('/api/stop_attendance', { method: 'POST' });
+        document.getElementById('start-attendance-btn').style.display = 'inline-flex';
+        document.getElementById('stop-attendance-btn').style.display = 'none';
+        document.getElementById('recognition-badge').textContent = 'Idle';
+        document.getElementById('recognition-badge').className = 'status-badge idle';
+        clearInterval(attendanceInterval);
+        clearInterval(recordsInterval);
+        showToast('Attendance recognition stopped', 'info');
+    }
+
+    async function checkAttendanceStatus() {
+        try {
+            const response = await fetch('/api/attendance_status');
+            const data = await response.json();
+
+            const alertsDiv = document.getElementById('recognition-alerts');
+
+            if (data.results && data.results.length > 0) {
+                alertsDiv.innerHTML = data.results.map(r => `
+                    <div class="recognition-alert">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span><strong>${r.name}</strong> recognized (${r.confidence.toFixed(0)}%)</span>
+                    </div>
+                `).join('');
+            }
+        } catch (err) {
+            console.error('Status check failed:', err);
+        }
+    }
+
+    async function refreshRecords() {
+        try {
+            const response = await fetch('/api/today_records');
+            const data = await response.json();
+
+            if (data.records.length > 0) {
+                const noRecords = document.getElementById('no-records');
+                if (noRecords) noRecords.style.display = 'none';
+
+                let tableHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Time</th><th>Confidence</th></tr></thead>
+                        <tbody>
+                `;
+                data.records.forEach(r => {
+                    tableHTML += `
+                        <tr class="fade-in">
+                            <td>${r.name}</td>
+                            <td>${r.time}</td>
+                            <td>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${r.confidence}%"></div>
+                                    <span>${r.confidence}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableHTML += '</tbody></table>';
+                document.getElementById('attendance-list').innerHTML = tableHTML;
+                document.getElementById('attendance-count').textContent = data.records.length;
+            }
+        } catch (err) {
+            console.error('Records refresh failed:', err);
+        }
+    }
+</script>
+{% endblock %}
