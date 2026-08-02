@@ -1,0 +1,87 @@
+# ============================================================
+# FaceTrack - Face Recognition Attendance System
+# .gitignore
+# ============================================================
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+.installed.cfg
+pip-selfcheck.json
+
+# ----- Virtual Environments -----
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# ----- Environment Variables -----
+.env
+.env.local
+.env.*.local
+secrets.json
+
+# ----- Database (contains personal user data) -----
+*.db
+*.sqlite
+*.sqlite3
+
+# ----- Dataset (personal face images - privacy) -----
+dataset/*/
+# Keep the dataset directory itself (via .gitkeep)
+!dataset/.gitkeep
+
+# ----- Face Encodings (auto-generated from dataset) -----
+encodings/*.npy
+# Keep the encodings directory itself (via .gitkeep)
+!encodings/.gitkeep
+
+# ----- Attendance Records (auto-generated, personal data) -----
+attendance/*.csv
+attendance/*.xlsx
+# Keep the attendance directory itself (via .gitkeep)
+!attendance/.gitkeep
+
+# ----- Large Model Files (download separately - see README) -----
+models/face_recognition_sface_2021dec.onnx
+# Keep the models directory itself (via .gitkeep)
+!models/.gitkeep
+# Keep the small detection model (227 KB - fine for GitHub)
+!models/face_detection_yunet_2023mar.onnx
+
+# ----- Logs -----
+*.log
+logs/
+
+# ----- IDE / Editor -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- OS -----
+Desktop.ini
+ehthumbs.db
