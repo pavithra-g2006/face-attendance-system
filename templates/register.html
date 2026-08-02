@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Register Face{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Register New Face</h1>
+    <p class="page-subtitle">Capture face samples using your webcam — ready for attendance instantly</p>
+</div>
+
+<div class="two-column">
+    <!-- Left: Webcam Feed -->
+    <div class="glass-card webcam-card">
+        <div class="card-header">
+            <h2>Webcam Feed</h2>
+            <span id="capture-badge" class="status-badge idle">Idle</span>
+        </div>
+        <div class="webcam-container">
+            <img id="webcam-feed" src="/video_feed/register" alt="Webcam Feed">
+            <div id="webcam-overlay" class="webcam-overlay">
+                <div class="scan-line"></div>
+            </div>
+        </div>
+        <!-- Progress Bar -->
+        <div id="progress-section" class="progress-section" style="display: none;">
+            <div class="progress-info">
+                <span>Capturing Samples</span>
+                <span id="progress-text">0 / {{ total_samples }}</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Registration Form -->
+    <div class="glass-card form-card">
+        <div class="card-header">
+            <h2>User Details</h2>
+        </div>
+        <form id="register-form" class="form">
+            <div class="form-group">
+                <label for="user-name">Full Name</label>
+                <input type="text" id="user-name" placeholder="Enter full name" required>
+            </div>
+            <div class="form-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <p>Position your face clearly in front of the webcam. The system will capture
+                    {{ total_samples }} face samples automatically. Slowly turn your head for better accuracy.
+                    <strong>No training step needed</strong> — your face will be ready for attendance
+                    immediately after capture.
+                </p>
+            </div>
+            <button type="submit" id="start-capture-btn" class="btn btn-primary btn-block">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg>
+                Start Capture
+            </button>
+            <button type="button" id="stop-capture-btn" class="btn btn-danger btn-block" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="6" width="12" height="12" />
+                </svg>
+                Stop Capture
+            </button>
+        </form>
+
+        <!-- Success Message -->
+        <div id="success-message" class="success-message" style="display: none;">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+            </div>
+            <h3>Registration Complete!</h3>
+            <p id="success-details"></p>
+            <div class="success-actions">
+                <a href="/register" class="btn btn-primary">Register Another</a>
+                <a href="/attendance" class="btn btn-secondary">Take Attendance</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const TOTAL = {{ total_samples }};
+    const registerForm = document.getElementById('register-form');
+    const startBtn = document.getElementById('start-capture-btn');
+    const stopBtn = document.getElementById('stop-capture-btn');
+    const progressSection = document.getElementById('progress-section');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    const captureBadge = document.getElementById('capture-badge');
+    const successMessage = document.getElementById('success-message');
+    const successDetails = document.getElementById('success-details');
+    const nameInput = document.getElementById('user-name');
+
+    let statusInterval = null;
+    let isPolling = false;
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        try {
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+                progressSection.style.display = 'block';
+                nameInput.disabled = true;
+                captureBadge.textContent = 'Capturing';
+                captureBadge.className = 'status-badge active';
+
+                // Use sequential polling (setTimeout) instead of setInterval
+                // to prevent overlapping requests
+                isPolling = true;
+                pollCaptureStatus();
+            } else {
+                showToast(data.message, 'error');
+            }
+        } catch (err) {
+            showToast('Failed to start registration', 'error');
+        }
+    });
+
+    stopBtn.addEventListener('click', async () => {
+        isPolling = false;
+        clearTimeout(statusInterval);
+        await fetch('/api/stop_capture', { method: 'POST' });
+        resetForm();
+    });
+
+    async function pollCaptureStatus() {
+        if (!isPolling) return;
+        try {
+            const response = await fetch('/api/capture_status');
+            const data = await response.json();
+
+            const percent = (data.samples_taken / data.total_samples) * 100;
+            progressFill.style.width = percent + '%';
+            progressText.textContent = `${data.samples_taken} / ${data.total_samples}`;
+
+            if (data.status === 'complete') {
+                isPolling = false;
+                captureBadge.textContent = 'Complete';
+                captureBadge.className = 'status-badge complete';
+
+                registerForm.style.display = 'none';
+                progressSection.style.display = 'none';
+                successMessage.style.display = 'block';
+                successDetails.textContent =
+                    `Successfully captured ${data.total_samples} face samples for "${nameInput.value}". Ready for attendance!`;
+                showToast('Face registration complete!', 'success');
+                return;
+            }
+        } catch (err) {
+            console.error('Status check failed:', err);
+        }
+
+        // Schedule next poll AFTER current one completes (no overlap)
+        if (isPolling) {
+            statusInterval = setTimeout(pollCaptureStatus, 1000);
+        }
+    }
+
+    function resetForm() {
+        clearInterval(statusInterval);
+        startBtn.style.display = 'flex';
+        stopBtn.style.display = 'none';
+        progressSection.style.display = 'none';
+        progressFill.style.width = '0%';
+        progressText.textContent = `0 / ${TOTAL}`;
+        nameInput.disabled = false;
+        captureBadge.textContent = 'Idle';
+        captureBadge.className = 'status-badge idle';
+    }
+</script>
+{% endblock %}
