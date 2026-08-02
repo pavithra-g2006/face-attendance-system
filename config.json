@@ -1,0 +1,14 @@
+{
+  "cosine_threshold": 0.363,
+  "detection_score_threshold": 0.6,
+  "nms_threshold": 0.3,
+  "liveness_enabled": true,
+  "liveness_threshold": 5,
+  "liveness_frames": 30,
+  "total_samples": 30,
+  "auto_save_attendance": true,
+  "min_confidence_for_attendance": 0.363,
+  "duplicate_check_timeout": 5,
+  "enable_logs": true,
+  "log_attendance": true
+}
