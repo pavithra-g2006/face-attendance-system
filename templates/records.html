@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Attendance Records{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Attendance Records</h1>
+    <p class="page-subtitle">View and browse attendance records by date</p>
+</div>
+
+<div class="glass-card">
+    <div class="card-header">
+        <h2>Select Date</h2>
+    </div>
+    <div class="date-picker-section">
+        <div class="date-buttons">
+            {% for date in dates %}
+            <a href="/records?date={{ date }}"
+                class="date-btn {% if selected_date == date or (not selected_date and loop.first) %}active{% endif %}">
+                {{ date }}
+            </a>
+            {% endfor %}
+            {% if not dates %}
+            <p class="text-muted">No attendance records available yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if records %}
+<div class="glass-card">
+    <div class="card-header">
+        <h2>Records for {{ selected_date or 'Today' }}</h2>
+        <span class="badge">{{ records|length }} entries</span>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><span class="badge">{{ record.user_id }}</span></td>
+                <td>{{ record.name }}</td>
+                <td>{{ record.time }}</td>
+                <td>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: {{ record.confidence }}%"></div>
+                        <span>{{ record.confidence }}%</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif dates %}
+<div class="glass-card">
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+        </svg>
+        <h3>No Records Found</h3>
+        <p>No attendance records for the selected date.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
