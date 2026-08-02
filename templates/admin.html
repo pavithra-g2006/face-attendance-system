@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">System statistics, configuration, and user management</p>
+</div>
+
+<!-- Statistics Section -->
+<div class="section-header">
+    <h2>System Statistics</h2>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon users-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" id="total-users">{{ stats.total_users }}</div>
+            <div class="stat-label">Total Users Registered</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon attendance-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" id="today-attendance">{{ stats.today_attendance }}</div>
+            <div class="stat-label">Today's Attendance</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon model-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" id="total-records">{{ stats.total_attendance_records }}</div>
+            <div class="stat-label">Total Attendance Records</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #06b6d4, #0891b2);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/><path d="M12 1v6m0 6v6"/>
+                <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24"/>
+                <path d="M1 12h6m6 0h6"/><path d="M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/>
+            </svg>
+        </div>
+        <div class="stat-info">
+            <div class="stat-value" id="avg-confidence">{{ stats.avg_confidence }}%</div>
+            <div class="stat-label">Average Confidence</div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Section -->
+<div class="glass-card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h2>System Configuration</h2>
+        <button class="btn btn-primary btn-sm" onclick="openConfigModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/><path d="M12 1v6m0 6v6"/>
+                <path d="M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24"/>
+                <path d="M1 12h6m6 0h6"/><path d="M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"/>
+            </svg>
+            Edit Config
+        </button>
+    </div>
+
+    <div class="config-grid">
+        <div class="config-item">
+            <span class="config-label">Cosine Threshold</span>
+            <span class="config-value">{{ config.cosine_threshold }}</span>
+            <p class="config-desc">Face match confidence threshold (0.0-1.0)</p>
+        </div>
+        <div class="config-item">
+            <span class="config-label">Liveness Detection</span>
+            <span class="config-value">{% if config.liveness_enabled %}Enabled{% else %}Disabled{% endif %}</span>
+            <p class="config-desc">Prevent spoofing with photos</p>
+        </div>
+        <div class="config-item">
+            <span class="config-label">Detection Score Threshold</span>
+            <span class="config-value">{{ config.detection_score_threshold }}</span>
+            <p class="config-desc">YuNet face detection confidence</p>
+        </div>
+        <div class="config-item">
+            <span class="config-label">Auto-save Attendance</span>
+            <span class="config-value">{% if config.auto_save_attendance %}Enabled{% else %}Disabled{% endif %}</span>
+            <p class="config-desc">Auto log to CSV on match</p>
+        </div>
+    </div>
+</div>
+
+<!-- Top Users Section -->
+{% if stats.top_users %}
+<div class="glass-card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h2>Top Users by Attendance</h2>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Attendance Count</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in stats.top_users %}
+            <tr>
+                <td>#{{ user.user_id }}</td>
+                <td>{{ user.name }}</td>
+                <td><strong>{{ user.count }}</strong></td>
+                <td>
+                    <button class="badge" onclick="viewUserStats({{ user.user_id }})">View Details</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<!-- All Users Management -->
+<div class="glass-card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h2>Registered Users</h2>
+        <span class="badge" style="margin-left: auto;">{{ users|length }} users</span>
+    </div>
+    
+    {% if users %}
+    <div class="users-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Total Attendance</th>
+                    <th>Avg Confidence</th>
+                    <th>Last Attendance</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>#{{ user.user_id }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.total_attendance }}</td>
+                    <td>{{ user.avg_confidence }}%</td>
+                    <td>{{ user.last_attendance[:10] if user.last_attendance else 'N/A' }}</td>
+                    <td>
+                        <button class="badge" onclick="deleteUser({{ user.user_id }})">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state small">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/><circle cx="12" cy="12" r="10" style="opacity: 0.3;"/>
+        </svg>
+        <p>No users registered yet</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Export Section -->
+<div class="glass-card" style="margin-top: 2rem;">
+    <div class="card-header">
+        <h2>Export Reports</h2>
+    </div>
+    <div class="form" style="max-width: 600px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" id="export-start-date" />
+            </div>
+            <div class="form-group">
+                <label>End Date</label>
+                <input type="date" id="export-end-date" />
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="exportReport()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><polyline points="12 15 12 3"/>
+            </svg>
+            Export Report
+        </button>
+    </div>
+</div>
+
+<!-- Config Modal -->
+<div id="config-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Configuration</h2>
+            <button class="modal-close" onclick="closeConfigModal()">✕</button>
+        </div>
+        <div class="form">
+            <div class="form-group">
+                <label for="config-cosine">Cosine Threshold (0.0-1.0)</label>
+                <input type="number" id="config-cosine" min="0" max="1" step="0.01" 
+                       value="{{ config.cosine_threshold }}">
+            </div>
+            <div class="form-group">
+                <label for="config-detection">Detection Score (0.0-1.0)</label>
+                <input type="number" id="config-detection" min="0" max="1" step="0.01"
+                       value="{{ config.detection_score_threshold }}">
+            </div>
+            <div class="form-group">
+                <label for="config-liveness">
+                    <input type="checkbox" id="config-liveness" 
+                           {% if config.liveness_enabled %}checked{% endif %}>
+                    Enable Liveness Detection
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="config-autosave">
+                    <input type="checkbox" id="config-autosave"
+                           {% if config.auto_save_attendance %}checked{% endif %}>
+                    Auto-save Attendance
+                </label>
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button class="btn btn-primary" onclick="saveConfig()">Save Changes</button>
+            <button class="btn btn-secondary" onclick="closeConfigModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.config-item {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.config-label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.config-value {
+    display: block;
+    font-size: 1.25rem;
+    color: var(--accent-cyan);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.config-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.users-table-container {
+    overflow-x: auto;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.modal-close:hover {
+    color: var(--text-primary);
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+</style>
+
+<script>
+function openConfigModal() {
+    document.getElementById('config-modal').style.display = 'flex';
+}
+
+function closeConfigModal() {
+    document.getElementById('config-modal').style.display = 'none';
+}
+
+async function saveConfig() {
+    const config = {
+        cosine_threshold: parseFloat(document.getElementById('config-cosine').value),
+        detection_score_threshold: parseFloat(document.getElementById('config-detection').value),
+        liveness_enabled: document.getElementById('config-liveness').checked,
+        auto_save_attendance: document.getElementById('config-autosave').checked,
+    };
+
+    try {
+        const response = await fetch('/api/admin/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Configuration updated successfully!');
+            closeConfigModal();
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update configuration');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user and all their records?')) return;
+
+    try {
+        const response = await fetch(`/api/delete_user/${userId}`, { method: 'DELETE' });
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete user');
+    }
+}
+
+async function viewUserStats(userId) {
+    try {
+        const response = await fetch(`/api/admin/user_stats/${userId}`);
+        const stats = await response.json();
+        alert(`User: ${stats.name}\nTotal Attendance: ${stats.total_attendance}\nAvg Confidence: ${stats.avg_confidence}%\nLast Attendance: ${stats.last_attendance || 'N/A'}`);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch user statistics');
+    }
+}
+
+async function exportReport() {
+    const startDate = document.getElementById('export-start-date').value;
+    const endDate = document.getElementById('export-end-date').value;
+
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/export?start_date=${startDate}&end_date=${endDate}`);
+        const result = await response.json();
+        
+        // Generate CSV
+        let csv = 'User ID,Name,Date,Attendance Count,Avg Confidence\n';
+        result.records.forEach(record => {
+            csv += `${record.user_id},${record.name},"${record.date}",${record.attendance_count},${record.avg_confidence}\n`;
+        });
+
+        // Download
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_report_${startDate}_to_${endDate}.csv`;
+        a.click();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to export report');
+    }
+}
+
+// Refresh stats every 30 seconds
+setInterval(async () => {
+    try {
+        const response = await fetch('/api/admin/stats');
+        const stats = await response.json();
+        document.getElementById('total-users').textContent = stats.total_users;
+        document.getElementById('today-attendance').textContent = stats.today_attendance;
+        document.getElementById('total-records').textContent = stats.total_attendance_records;
+        document.getElementById('avg-confidence').textContent = stats.avg_confidence + '%';
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+    }
+}, 30000);
+</script>
+{% endblock %}
