@@ -1,0 +1,10 @@
+# This file keeps the models/ directory tracked by Git.
+# The large SFace model (38MB) is excluded. See download instructions below.
+#
+# REQUIRED MODEL FILES:
+# 1. face_detection_yunet_2023mar.onnx  ← included in repo (227 KB)
+# 2. face_recognition_sface_2021dec.onnx ← DOWNLOAD MANUALLY (38 MB)
+#
+# Download SFace model from:
+# https://github.com/opencv/opencv_zoo/blob/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
+# Place it in the models/ directory before running the app.
