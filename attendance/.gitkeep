@@ -1,0 +1,3 @@
+# This file keeps the attendance/ directory tracked by Git.
+# Attendance CSV files are excluded via .gitignore (personal data).
+# Attendance records are generated automatically when the app runs.
